@@ -29,48 +29,59 @@ create or replace PROCEDURE CREATE_EMPLOYEE_WITH_USER (
     P_FIRST_NAME    IN EMPLOYEES.FIRST_NAME%TYPE,
     P_LAST_NAME     IN EMPLOYEES.LAST_NAME%TYPE,
     P_EMAIL         IN EMPLOYEES.EMAIL%TYPE,
+    P_PHONE         IN EMPLOYEES.PHONE%TYPE,
+    P_HIRE_DATE     IN EMPLOYEES.HIRE_DATE%TYPE,
     P_DEPARTMENT_ID IN EMPLOYEES.DEPARTMENT_ID%TYPE,
     P_POSITION_ID   IN EMPLOYEES.POSITION_ID%TYPE,
     P_SALARY        IN EMPLOYEES.SALARY%TYPE,
-    P_STATUS        IN EMPLOYEES.STATUS%TYPE
+    P_STATUS        IN EMPLOYEES.STATUS%TYPE,
+    P_ROLE_ID       IN EMPLOYEES.ROLE_ID%TYPE
 )
 IS
-    L_EMPLOYEE_ID EMPLOYEES.EMPLOYEE_ID%TYPE;
-    L_TEMP_PASSWORD VARCHAR2(30);
+    L_EMPLOYEE_ID   EMPLOYEES.EMPLOYEE_ID%TYPE;
+    L_TEMP_PASSWORD USERS.PASSWORD%TYPE;
+    L_STATUS        EMPLOYEES.STATUS%TYPE;
 BEGIN
     SAVEPOINT BEFORE_EMPLOYEE_CREATION;
 
-    -- Generate a temporary password for this employee
-   -- L_TEMP_PASSWORD := DBMS_RANDOM.STRING('X', 12);
     L_TEMP_PASSWORD := 'Test@12345';
+    L_STATUS := UPPER(TRIM(P_STATUS));
 
-    -- Create the employee first
     INSERT INTO EMPLOYEES (
         FIRST_NAME,
         LAST_NAME,
         EMAIL,
+        PHONE,
+        HIRE_DATE,
         DEPARTMENT_ID,
         POSITION_ID,
         SALARY,
-        STATUS
+        STATUS,
+        ROLE_ID
     )
     VALUES (
         TRIM(P_FIRST_NAME),
         TRIM(P_LAST_NAME),
         LOWER(TRIM(P_EMAIL)),
+        TRIM(P_PHONE),
+        P_HIRE_DATE,
         P_DEPARTMENT_ID,
         P_POSITION_ID,
         P_SALARY,
-        P_STATUS
+        L_STATUS,
+        P_ROLE_ID
     )
     RETURNING EMPLOYEE_ID INTO L_EMPLOYEE_ID;
 
-    -- Create the linked login account
     ADD_USER(
         P_USERNAME    => LOWER(TRIM(P_EMAIL)),
         P_EMAIL       => LOWER(TRIM(P_EMAIL)),
         P_PASSWORD    => L_TEMP_PASSWORD,
-        P_EMPLOYEE_ID => L_EMPLOYEE_ID
+        P_EMPLOYEE_ID => L_EMPLOYEE_ID,
+        P_IS_ACTIVE   => CASE
+                            WHEN L_STATUS = 'ACTIVE' THEN 'Y'
+                            ELSE 'N'
+                         END
     );
 
 EXCEPTION
